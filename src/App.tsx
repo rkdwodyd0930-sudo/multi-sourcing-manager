@@ -96,6 +96,7 @@ export function App() {
 
     if (res.success) {
       sessionStorage.setItem('admin_auth', 'true')
+      sessionStorage.setItem('admin_pass', adminPassword.trim())
       setIsAuthenticated(true)
       showToast('어드민 통합 관리자로 인증되었습니다!')
     } else {
@@ -105,6 +106,7 @@ export function App() {
 
   const handleLogout = () => {
     sessionStorage.removeItem('admin_auth')
+    sessionStorage.removeItem('admin_pass')
     setIsAuthenticated(false)
     setAdminUsername('')
     setAdminPassword('')

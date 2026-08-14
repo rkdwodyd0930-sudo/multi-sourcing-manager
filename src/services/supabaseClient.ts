@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL || ''
-const SUPABASE_KEY = import.meta.env?.VITE_SUPABASE_SECRET_KEY || 
-                     import.meta.env?.VITE_SUPABASE_ANON_KEY || 
-                     import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY || ''
+const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL || 'https://fcbdyezdxqwmeywfgpvr.supabase.co'
+const SUPABASE_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || 
+                     import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY || 
+                     'sb_publishable_8jkKtvgnOH1tuYCnacTlWg_uW2vwrsY'
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
@@ -29,17 +29,33 @@ export async function hashPassword(password: string): Promise<string> {
 export async function loginAdminUser(username: string, password: string): Promise<{ success: boolean; user?: MsUser; message: string }> {
   try {
     const cleanUsername = username.trim().toLowerCase()
-    const hashedPassword = await hashPassword(password)
+    const hashedPassword = await hashPassword(password.trim())
 
-    const { data: user, error } = await supabase
+    // 1. username 또는 email 단일 정확 검색
+    let { data: user, error } = await supabase
       .from('ms_users')
       .select('*')
-      .or(`username.eq.${cleanUsername},email.eq.${cleanUsername}`)
-      .eq('password', hashedPassword)
+      .eq('username', cleanUsername)
       .maybeSingle()
 
-    if (error || !user) {
-      return { success: false, message: '아이디 또는 비밀번호가 일치하지 않습니다.' }
+    console.log('[Login Debug]', { cleanUsername, user, error, SUPABASE_URL, keyPresent: !!SUPABASE_KEY })
+
+    if (!user) {
+      const { data: userByEmail, error: emailErr } = await supabase
+        .from('ms_users')
+        .select('*')
+        .eq('email', cleanUsername)
+        .maybeSingle()
+      console.log('[Login Debug Email]', { userByEmail, emailErr })
+      user = userByEmail
+    }
+
+    if (!user) {
+      return { success: false, message: `존재하지 않는 어드민 아이디입니다. (${error?.message || '조회 0건'})` }
+    }
+
+    if (user.password !== hashedPassword) {
+      return { success: false, message: '비밀번호가 일치하지 않습니다.' }
     }
 
     if (!user.is_approved) {
@@ -78,16 +94,20 @@ export async function fetchMsUsers(): Promise<{ success: boolean; users: MsUser[
   }
 }
 
-// 유저 승인 처리 (is_approved = true)
-export async function approveMsUser(id: string): Promise<{ success: boolean; message: string }> {
+// 유저 승인 처리 (RPC 사용)
+export async function approveMsUser(id: string, adminPass?: string): Promise<{ success: boolean; message: string }> {
   try {
-    const { error } = await supabase
-      .from('ms_users')
-      .update({ is_approved: true })
-      .eq('id', id)
+    const pass = adminPass || sessionStorage.getItem('admin_pass') || ''
+    const { data: isSuccess, error } = await supabase.rpc('approve_user_secure', {
+      target_id: id,
+      admin_password_input: pass
+    })
 
     if (error) {
       return { success: false, message: `승인 실패: ${error.message}` }
+    }
+    if (!isSuccess) {
+      return { success: false, message: '어드민 권한 검증 실패 (비밀번호 불일치)' }
     }
     return { success: true, message: '유저가 성공적으로 승인되었습니다!' }
   } catch (e: any) {
@@ -95,16 +115,20 @@ export async function approveMsUser(id: string): Promise<{ success: boolean; mes
   }
 }
 
-// 유저 승인 취소/정지 (is_approved = false)
-export async function revokeMsUser(id: string): Promise<{ success: boolean; message: string }> {
+// 유저 승인 취소/정지 (RPC 사용)
+export async function revokeMsUser(id: string, adminPass?: string): Promise<{ success: boolean; message: string }> {
   try {
-    const { error } = await supabase
-      .from('ms_users')
-      .update({ is_approved: false })
-      .eq('id', id)
+    const pass = adminPass || sessionStorage.getItem('admin_pass') || ''
+    const { data: isSuccess, error } = await supabase.rpc('revoke_user_secure', {
+      target_id: id,
+      admin_password_input: pass
+    })
 
     if (error) {
       return { success: false, message: `승인 취소 실패: ${error.message}` }
+    }
+    if (!isSuccess) {
+      return { success: false, message: '어드민 권한 검증 실패 (비밀번호 불일치)' }
     }
     return { success: true, message: '유저 승인이 취소되었습니다.' }
   } catch (e: any) {
@@ -112,16 +136,20 @@ export async function revokeMsUser(id: string): Promise<{ success: boolean; mess
   }
 }
 
-// 유저 삭제
-export async function deleteMsUser(id: string): Promise<{ success: boolean; message: string }> {
+// 유저 삭제 (RPC 사용)
+export async function deleteMsUser(id: string, adminPass?: string): Promise<{ success: boolean; message: string }> {
   try {
-    const { error } = await supabase
-      .from('ms_users')
-      .delete()
-      .eq('id', id)
+    const pass = adminPass || sessionStorage.getItem('admin_pass') || ''
+    const { data: isSuccess, error } = await supabase.rpc('delete_user_secure', {
+      target_id: id,
+      admin_password_input: pass
+    })
 
     if (error) {
       return { success: false, message: `삭제 실패: ${error.message}` }
+    }
+    if (!isSuccess) {
+      return { success: false, message: '어드민 권한 검증 실패 (비밀번호 불일치)' }
     }
     return { success: true, message: '유저 계정이 삭제되었습니다.' }
   } catch (e: any) {
@@ -129,20 +157,24 @@ export async function deleteMsUser(id: string): Promise<{ success: boolean; mess
   }
 }
 
-// 비밀번호 재설정
-export async function updateMsUserPassword(id: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+// 비밀번호 재설정 (RPC 사용)
+export async function updateMsUserPassword(id: string, newPassword: string, adminPass?: string): Promise<{ success: boolean; message: string }> {
   try {
     if (!newPassword.trim()) {
       return { success: false, message: '새 비밀번호를 입력해주세요.' }
     }
-    const hashedPassword = await hashPassword(newPassword.trim())
-    const { error } = await supabase
-      .from('ms_users')
-      .update({ password: hashedPassword })
-      .eq('id', id)
+    const pass = adminPass || sessionStorage.getItem('admin_pass') || ''
+    const { data: isSuccess, error } = await supabase.rpc('update_password_secure', {
+      target_id: id,
+      new_pass: newPassword.trim(),
+      admin_password_input: pass
+    })
 
     if (error) {
       return { success: false, message: `비밀번호 변경 실패: ${error.message}` }
+    }
+    if (!isSuccess) {
+      return { success: false, message: '어드민 권한 검증 실패 (비밀번호 불일치)' }
     }
     return { success: true, message: '비밀번호가 성공적으로 변경되었습니다.' }
   } catch (e: any) {

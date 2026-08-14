@@ -37,7 +37,6 @@ jobs:
         run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://fcbdyezdxqwmeywfgpvr.supabase.co' }}
-          VITE_SUPABASE_SECRET_KEY: ${{ secrets.VITE_SUPABASE_SECRET_KEY }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'sb_publishable_8jkKtvgnOH1tuYCnacTlWg_uW2vwrsY' }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_8jkKtvgnOH1tuYCnacTlWg_uW2vwrsY' }}
 
