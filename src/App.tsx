@@ -59,6 +59,8 @@ export function App() {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false)
   const [newUsername, setNewUsername] = useState('')
   const [newName, setNewName] = useState('')
+  const [newCohort, setNewCohort] = useState('')
+  const [newPhone, setNewPhone] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [newIsApproved, setNewIsApproved] = useState(true)
 
@@ -98,7 +100,7 @@ export function App() {
       sessionStorage.setItem('admin_auth', 'true')
       sessionStorage.setItem('admin_pass', adminPassword.trim())
       setIsAuthenticated(true)
-      showToast('어드민 통합 관리자로 인증되었습니다!')
+      showToast('어드민 콘솔에 접속했습니다!')
     } else {
       setPinError(res.message)
     }
@@ -108,15 +110,14 @@ export function App() {
     sessionStorage.removeItem('admin_auth')
     sessionStorage.removeItem('admin_pass')
     setIsAuthenticated(false)
-    setAdminUsername('')
-    setAdminPassword('')
+    setUsers([])
   }
 
   // 승인 처리
   const handleApprove = async (user: MsUser) => {
     const res = await approveMsUser(user.id)
     if (res.success) {
-      showToast(`'${user.name || user.username}' 유저 승인이 완료되었습니다!`)
+      showToast(`'${user.name || user.username}' 유저가 승인되었습니다!`)
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_approved: true } : u))
     } else {
       showToast(res.message, 'error')
@@ -127,7 +128,7 @@ export function App() {
   const handleRevoke = async (user: MsUser) => {
     const res = await revokeMsUser(user.id)
     if (res.success) {
-      showToast(`'${user.name || user.username}' 유저 승인이 취소(정지)되었습니다.`)
+      showToast(`'${user.name || user.username}' 유저의 승인이 취소되었습니다.`)
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_approved: false } : u))
     } else {
       showToast(res.message, 'error')
@@ -138,9 +139,13 @@ export function App() {
   const handleConfirmResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!resetModalUser) return
+    if (!newPasswordInput.trim()) {
+      showToast('새 비밀번호를 입력해주세요.', 'error')
+      return
+    }
     const res = await updateMsUserPassword(resetModalUser.id, newPasswordInput)
     if (res.success) {
-      showToast(`'${resetModalUser.username}' 비밀번호가 성공적으로 변경되었습니다.`)
+      showToast(`'${resetModalUser.username}' 유저의 비밀번호가 변경되었습니다!`)
       setResetModalUser(null)
       setNewPasswordInput('')
     } else {
@@ -164,12 +169,14 @@ export function App() {
   // 신규 유저 생성 실행
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
-    const res = await createMsUser(newUsername, newName, newPassword, newIsApproved)
+    const res = await createMsUser(newUsername, newName, newPassword, newIsApproved, newCohort, newPhone)
     if (res.success) {
       showToast(res.message)
       setIsAddUserModalOpen(false)
       setNewUsername('')
       setNewName('')
+      setNewCohort('')
+      setNewPhone('')
       setNewPassword('')
       loadUsers()
     } else {
@@ -197,13 +204,15 @@ export function App() {
       if (filterTab === 'PENDING' && u.is_approved) return false
       if (filterTab === 'APPROVED' && !u.is_approved) return false
 
-      // 검색어 필터 (이름, 아이디/이메일 검색)
+      // 검색어 필터 (이름, 기수, 연락처, 아이디/이메일 검색)
       if (searchQuery.trim()) {
         const q = searchQuery.trim().toLowerCase()
         const matchUsername = u.username.toLowerCase().includes(q)
         const matchName = u.name ? u.name.toLowerCase().includes(q) : false
+        const matchCohort = u.cohort ? u.cohort.toLowerCase().includes(q) : false
+        const matchPhone = u.phone ? u.phone.toLowerCase().includes(q) : false
         const matchEmail = u.email ? u.email.toLowerCase().includes(q) : false
-        return matchUsername || matchName || matchEmail
+        return matchUsername || matchName || matchCohort || matchPhone || matchEmail
       }
 
       return true
@@ -468,6 +477,8 @@ export function App() {
                 <tr className="bg-[#0b0f19]/80 border-b border-slate-800 text-slate-400 text-xs font-bold uppercase tracking-wider">
                   <th className="py-3.5 px-4 w-12 text-center">#</th>
                   <th className="py-3.5 px-4">이름 (실명)</th>
+                  <th className="py-3.5 px-4 w-24">기수</th>
+                  <th className="py-3.5 px-4 w-36">연락처</th>
                   <th className="py-3.5 px-4">아이디 (Username)</th>
                   <th className="py-3.5 px-4">가입 일시</th>
                   <th className="py-3.5 px-4 text-center w-36">승인 상태</th>
@@ -477,7 +488,7 @@ export function App() {
               <tbody className="divide-y divide-slate-800/60 text-xs">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="py-16 text-center text-slate-500">
+                    <td colSpan={8} className="py-16 text-center text-slate-500">
                       <div className="flex flex-col items-center gap-2">
                         <RefreshCw size={24} className="animate-spin text-purple-400" />
                         <span className="font-semibold mt-1">유저 데이터 로딩 중...</span>
@@ -486,7 +497,7 @@ export function App() {
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-16 text-center text-slate-500">
+                    <td colSpan={8} className="py-16 text-center text-slate-500">
                       <div className="flex flex-col items-center gap-2">
                         <AlertCircle size={28} className="text-slate-600" />
                         <span className="font-semibold text-slate-400 text-sm">해당되는 유저가 없습니다.</span>
@@ -533,6 +544,22 @@ export function App() {
                               {user.name || <span className="text-slate-500 italic font-normal">(미입력)</span>}
                             </span>
                           </div>
+                        </td>
+
+                        {/* Cohort */}
+                        <td className="py-4 px-4">
+                          {user.cohort ? (
+                            <span className="px-2.5 py-1 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 font-extrabold text-xs">
+                              {user.cohort}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 italic">-</span>
+                          )}
+                        </td>
+
+                        {/* Phone */}
+                        <td className="py-4 px-4 font-mono font-semibold text-slate-300">
+                          {user.phone || <span className="text-slate-500 italic font-normal">-</span>}
                         </td>
 
                         {/* Username */}
@@ -726,14 +753,39 @@ export function App() {
             </div>
 
             <form onSubmit={handleCreateUser} className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">이름 (실명)</label>
+                  <input
+                    type="text"
+                    required
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="예: 홍길동"
+                    className="w-full bg-[#0b0f19] border border-slate-700 focus:border-purple-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">기수</label>
+                  <input
+                    type="text"
+                    required
+                    value={newCohort}
+                    onChange={(e) => setNewCohort(e.target.value)}
+                    placeholder="예: 10기"
+                    className="w-full bg-[#0b0f19] border border-slate-700 focus:border-purple-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">이름 (실명)</label>
+                <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">연락처</label>
                 <input
                   type="text"
                   required
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="예: 홍길동"
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  placeholder="예: 010-1234-5678"
                   className="w-full bg-[#0b0f19] border border-slate-700 focus:border-purple-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
                 />
               </div>

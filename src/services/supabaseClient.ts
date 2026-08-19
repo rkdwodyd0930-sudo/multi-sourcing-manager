@@ -11,6 +11,8 @@ export interface MsUser {
   id: string
   username: string
   name?: string
+  cohort?: string
+  phone?: string
   email?: string
   password?: string
   is_approved: boolean
@@ -183,7 +185,14 @@ export async function updateMsUserPassword(id: string, newPassword: string, admi
 }
 
 // 신규 유저 수동 생성
-export async function createMsUser(username: string, name: string, password: string, is_approved: boolean): Promise<{ success: boolean; message: string }> {
+export async function createMsUser(
+  username: string, 
+  name: string, 
+  password: string, 
+  is_approved: boolean,
+  cohort?: string,
+  phone?: string
+): Promise<{ success: boolean; message: string }> {
   try {
     const cleanUsername = username.trim().toLowerCase()
     const cleanName = name.trim()
@@ -200,6 +209,8 @@ export async function createMsUser(username: string, name: string, password: str
         username: cleanUsername,
         email: cleanUsername,
         name: cleanName,
+        cohort: (cohort || '').trim(),
+        phone: (phone || '').trim(),
         password: hashedPassword,
         is_approved
       }])
