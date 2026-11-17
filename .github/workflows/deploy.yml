@@ -36,9 +36,9 @@ jobs:
       - name: Build Vite App
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://fcbdyezdxqwmeywfgpvr.supabase.co' }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'sb_publishable_8jkKtvgnOH1tuYCnacTlWg_uW2vwrsY' }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_8jkKtvgnOH1tuYCnacTlWg_uW2vwrsY' }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://joxeuldxdptbddbzthmu.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'sb_publishable_bqJ1R0-9cM_lmQ-l3ya4rw_gIdoFQME' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_bqJ1R0-9cM_lmQ-l3ya4rw_gIdoFQME' }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

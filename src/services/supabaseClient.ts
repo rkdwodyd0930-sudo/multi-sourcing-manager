@@ -1,11 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL || 'https://fcbdyezdxqwmeywfgpvr.supabase.co'
+const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL || 'https://joxeuldxdptbddbzthmu.supabase.co'
 const SUPABASE_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || 
                      import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY || 
-                     'sb_publishable_8jkKtvgnOH1tuYCnacTlWg_uW2vwrsY'
+                     'sb_publishable_bqJ1R0-9cM_lmQ-l3ya4rw_gIdoFQME'
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  db: { schema: 'sourcing' },
+})
 
 export interface MsUser {
   id: string
